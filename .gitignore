@@ -2,3 +2,5 @@
 /plugins
 /logs
 /config
+/dags/__pycache__
+/dags/scripts/__pycache__
