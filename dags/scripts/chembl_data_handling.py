@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import psycopg2
 from time import time 
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict
 import multiprocessing
 
 
@@ -14,9 +14,6 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import (
     Variable,
 )
-
-NECESSARY_COLS = ['molecule_chembl_id', 'molecule_properties', 'molecule_structures', 'molecule_type']  # known by a research of data
-
 
 def _get_data_chunk(source_url: str, chunk_size: int, offset: int) -> Tuple[List[Dict], Dict]:
     response = requests.get(
@@ -43,7 +40,8 @@ def _process_data_chunk(mols: List[Dict], offset: int) -> pd.DataFrame:
     df = pd.DataFrame(mols)
 
     # drop unnecessary data (there are cols with nulls mostly)
-    cols_to_del = set(df.columns).difference(NECESSARY_COLS)
+    necessary_cols = Variable.get('necessary_cols').split()
+    cols_to_del = set(df.columns).difference(necessary_cols)
     df = df.drop(columns=cols_to_del)
 
     # dump columns with dicts 
@@ -82,7 +80,8 @@ def _worker(args) -> None:
     chembl_url = Variable.get('chembl_url')
     start_point = args[0]
     end_point = args[1]
-    chunk_size = args[2]
+    chunk_size = int(Variable.get('chunk_size'))
+    step = chunk_size * int(Variable.get('num_of_workers'))
 
     current = multiprocessing.current_process()
 
@@ -96,19 +95,26 @@ def _worker(args) -> None:
     avg_chunk_time = 0
     all_time = 0
     done_chunks_count = 0
-    left_chunks = int(total_count / chunk_size)
+    left_chunks = int(total_count / step)
 
-    # load/process/ingest loop
-    for offset in range(start_point, end_point+chunk_size, chunk_size):
+    # load/process/ingest loop.
+    for offset in range(start_point, end_point+chunk_size, step):
         
+        # logging.info(f'offset={offset}, start={start_point}, end={end_point+chunk_size}, step={step}')
         logging.info(
-            f'Worker-{current._identity[0]} is handling {done_chunks_count}/{int(total_count / chunk_size)} molecules chunk. ' +
+            f'Worker-{current._identity[0]} is handling {done_chunks_count}/{int(total_count / step)} molecules chunk. ' +
             f'Estimated time (in sec) to finish: {avg_chunk_time * left_chunks}. ' +
             f'Time left (in sec): {int(all_time)}'
         )
         
         curr_time = time()
         mols, _ = _get_data_chunk(chembl_url, chunk_size, offset)
+
+        # if offset >= total amount of mols on chembl DB, chembl api just returns empty list of mols,
+        # this can be happened with worker handling the last part of the database because of 
+        # the loop range definition. It is our exit point 
+        if len(mols) == 0:  
+            break  
         
         processed_df = _process_data_chunk(mols, offset)
         
@@ -138,16 +144,16 @@ def handle_chembl_data() -> None:
     # used to define for_loop insted of while_loop
     _, meta = _get_data_chunk(chembl_url, 1, 0)
 
-    latest_chunk_num = 0 # _fetch_last_chunk_offset()
-    chunk_size = 2000
+    latest_chunk_num = _fetch_last_chunk_offset()
     total_count = meta['total_count']
 
-    # set up multiprocessing stuff
+    # set up args for multiproc workers
     num_of_workers = int(Variable.get('num_of_workers'))
-    start_intervals = np.linspace(latest_chunk_num, total_count, num_of_workers, endpoint=False,  dtype=int)
-    end_intervals = np.linspace(start_intervals[1], total_count, num_of_workers, endpoint=True, dtype=int)
+    chunk_size = int(Variable.get('chunk_size'))
+    start_intervals = [latest_chunk_num + chunk_size * i for i in range(num_of_workers)]  # start intervasl with the offset equaled a chunk size
+    end_intervals = [total_count] * num_of_workers
     
     pool = multiprocessing.Pool(processes=num_of_workers)
-    pool.map(_worker, [(start, end, chunk_size) for start, end in zip(start_intervals, end_intervals)])
+    pool.map(_worker, [(start, end) for start, end in zip(start_intervals, end_intervals)])
 
     logging.info('Molecules from ChEMBL have been loaded and ingested')
