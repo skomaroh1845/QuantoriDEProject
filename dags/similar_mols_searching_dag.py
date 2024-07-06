@@ -10,7 +10,10 @@ from airflow.utils.trigger_rule import TriggerRule
 
 
 from scripts.utils import empty_func
+from scripts.check_chembl_data_existance import check_chembl_data_existance
 from scripts.chembl_data_handling import handle_chembl_data
+from scripts.load_s3_input_data import load_s3_input_data
+from scripts.upload_mols_data_to_s3 import upload_mols_data
 
 
 with DAG(
@@ -24,18 +27,23 @@ with DAG(
     
     start_op = EmptyOperator(task_id='start')
 
-    handle_chembl_data_op = PythonOperator(
-        task_id = 'handle_chembl_data',
-        python_callable = handle_chembl_data,
+    check_chembl_data_existance_op = BranchPythonOperator(
+        task_id='check_chembl_data_existance', 
+        python_callable=check_chembl_data_existance,
     )
+
+    # handle_chembl_data_op = PythonOperator(
+    #     task_id = 'handle_chembl_data',
+    #     python_callable = handle_chembl_data,
+    # )
 
     # check_for_new_input_data_op = BranchPythonOperator(task_id='check_for_new_input_data', python_callable=empty_func)
 
-    # chech_chembl_data_existance_op = BranchPythonOperator(task_id='chech_chembl_data_existance', python_callable=empty_func)
-
     # load_chembl_data_op = PythonOperator(task_id='load_chembl_data', python_callable=empty_func)    
 
-    # load_s3_input_data_op = PythonOperator(task_id='load_s3_input_data', python_callable=empty_func)
+    load_s3_input_data_op = PythonOperator(task_id='load_s3_input_data', python_callable=load_s3_input_data)
+
+    upload_mols_data_op = PythonOperator(task_id='upload_mols_data', python_callable=upload_mols_data)
 
     # ingest_s3_input_data_op = PythonOperator(task_id='ingest_s3_input_data', python_callable=empty_func)
 
@@ -78,8 +86,8 @@ with DAG(
     
     # check_2_op >> finish_op
 
-    start_op >> handle_chembl_data_op >> finish_op
-
+    # start_op >> check_chembl_data_existance_op >> handle_chembl_data_op >> load_s3_input_data_op >> upload_mols_data_op >> finish_op
+    start_op >> check_chembl_data_existance_op >> load_s3_input_data_op >> upload_mols_data_op >> finish_op
 
     
 
