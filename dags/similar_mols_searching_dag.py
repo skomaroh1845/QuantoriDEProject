@@ -6,6 +6,7 @@ from airflow.operators.python import (
     PythonOperator,
     BranchPythonOperator,
 )
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 
@@ -24,10 +25,25 @@ with DAG(
     
     start_op = EmptyOperator(task_id='start')
 
-    handle_chembl_data_op = PythonOperator(
-        task_id = 'handle_chembl_data',
-        python_callable = handle_chembl_data,
+    # handle_chembl_data_op = PythonOperator(
+    #     task_id = 'handle_chembl_data',
+    #     python_callable = handle_chembl_data,
+    # )
+
+    # creates tables if they are not exist
+    create_silver_layer_tables_op = PostgresOperator(
+        task_id='create_silver_layer_tables',
+        sql='scripts/create_silver_tables.sql',
+        postgres_conn_id='postgres_AWS'
     )
+
+    # move chembl data from bronze to silver layer
+    move_chembl_to_silver_op = PostgresOperator(
+        task_id='move_chembl_to_silver',
+        sql='scripts/move_chembl_to_silver.sql',
+        postgres_conn_id='postgres_AWS'
+    )
+
 
     # check_for_new_input_data_op = BranchPythonOperator(task_id='check_for_new_input_data', python_callable=empty_func)
 
@@ -78,7 +94,7 @@ with DAG(
     
     # check_2_op >> finish_op
 
-    start_op >> handle_chembl_data_op >> finish_op
+    start_op >> create_silver_layer_tables_op >> move_chembl_to_silver_op >> finish_op
 
 
     
