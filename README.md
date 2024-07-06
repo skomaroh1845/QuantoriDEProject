@@ -25,7 +25,29 @@ Open a tab in your web browser at `http://localhost:8080/`. Login and password a
 
 ![alt text](imgs/image-2.png)
 
-#### 5) Launch the DAG
+#### 5) Setup the connection
+In the above menu go to Admin->Connections, press add connection button and fill the fields with your connection info.
+
+![alt text](imgs/image.png)
+
+#### 6) Setup variables
+In the above menu go to Admin->Variables, you need to add `num_of_workers` variable for multiprocessing and `chembl_url` with the link to a data source.
+
+![alt text](imgs/image-4.png)
+![alt text](imgs/image-5.png)
+
+#### 7) Edit config `airflow.cfg`
+This setting will cause airflow to start a new Python interpreter when running task instead of forking/using multiprocessing, and will allow us using multiprocessing inside the tasks. Set this variable `True` in `airflow.cfg` file.
+```python
+execute_tasks_new_python_interpreter = True
+```
+Also increase sql alchemy pool recycle time and number of connections.
+```python
+sql_alchemy_pool_recycle = 1800*3
+sql_alchemy_pool_size = 10
+```
+
+#### 7) Launch the DAG
 Click the trigger DAG button on the right side and go drink coffee, now machines is working instead of you.
 
 ![alt text](imgs/image-3.png)
