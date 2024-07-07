@@ -1,6 +1,8 @@
 import logging
 
-import rdlit
+from typing import Union
+
+import rdkit
 from rdkit.Chem import AllChem
 from rdkit import Chem
 import pandas as pd
@@ -10,7 +12,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
 
-def _get_fingerprint(smile: str) -> rdkit.DataStructs.cDataStructs.ExplicitBitVect | None:
+def _get_fingerprint(smile: str) -> Union[rdkit.DataStructs.cDataStructs.ExplicitBitVect, None]:
     mol = Chem.MolFromSmiles(smile)
     if mol is None:
         return None  # Return None if the SMILES string is invalid
@@ -26,9 +28,9 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
     path_to_download = '/opt/airflow/'
     fp_files_names = []
 
-    # by my estimations silver_chembl_id table with ~2.4*10^6 rows should be ~500 Mb
-    # lets handle with it by chunks of ~10Mb size, they should have than ~50*10^3 rows
-    # and loop will get 50 iterations 
+    # by my estimations silver_chembl_id table with ~2.4*10^6 raws should be ~500 Mb
+    # lets handle with it by chunks of ~10Mb size, than they should have ~50*10^3 raws
+    # and loop will take 50 iterations 
     chunk_size = 50000
 
     with connection.cursor() as cursor:
@@ -61,12 +63,13 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
             logging.info(f'Fingerprints were successfully calculated for {len(tmp_df)} mols.')
 
             # load data to DB
+            tmp_df = tmp_df.drop(columns=['smile'])
             tmp_df.to_sql(dest_table_name, connection, if_exists='append', index=False)
 
             # save to file for futher upload to s3. Only for mols from chembl 
             if is_chembl_data:
                 tmp_df.to_csv(path_to_download + f'{dest_table_name}_{offset}.csv', index=False)
-                fp_files_names.append(path_to_download + f'{dest_table_name}_{offset}.csv')
+                fp_files_names.append(path_to_download + f'{dest_table_name}_offset_{offset}.csv')
         
     if is_chembl_data:
         ti.xcom_push(key='fp_files_names', value=fp_files_names)
