@@ -6,6 +6,7 @@ from airflow.operators.python import (
     PythonOperator,
     BranchPythonOperator,
 )
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.utils.trigger_rule import TriggerRule
 
 
@@ -33,6 +34,7 @@ with DAG(
     
     start_op = EmptyOperator(task_id='start')
 
+    mols_fingerprints_and_similarity_scores
     check_chembl_data_existance_op = BranchPythonOperator(
         task_id='check_chembl_data_existance', 
         python_callable=check_chembl_data_existance,
@@ -47,6 +49,20 @@ with DAG(
         task_id='check_for_new_input_data', 
         python_callable=check_for_new_input_data
         ) 
+    
+    # creates tables if they are not exist
+    create_silver_layer_tables_op = PostgresOperator(
+        task_id='create_silver_layer_tables',
+        sql='scripts/create_silver_tables.sql',
+        postgres_conn_id='postgres_AWS'
+    )
+
+    # move chembl data from bronze to silver layer
+    move_chembl_to_silver_op = PostgresOperator(
+        task_id='move_chembl_to_silver',
+        sql='scripts/move_chembl_to_silver.sql',
+        postgres_conn_id='postgres_AWS'
+    )
 
     load_s3_input_data_op = PythonOperator(
         task_id='load_s3_input_data', 
@@ -136,7 +152,8 @@ with DAG(
     start_op >> check_chembl_data_existance_op >> check_for_new_input_data_op >> finish_op
     start_op >> check_chembl_data_existance_op >> check_for_new_input_data_op \
              >> load_s3_input_data_op >> ingest_s3_input_data_op >> check_1_op
-    start_op >> check_chembl_data_existance_op >> handle_chembl_data_op >> check_1_op
+    start_op >> check_chembl_data_existance_op >> handle_chembl_data_op\
+             >> create_silver_layer_tables_op >> move_chembl_to_silver_op >> check_1_op
 
     check_1_op >> [calc_chembl_mols_fingerprints_op, calc_target_mols_fingerprints_op]\
                >> calc_similarity_scores_op\
