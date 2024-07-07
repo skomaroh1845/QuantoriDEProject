@@ -54,7 +54,7 @@ def _fetch_last_chunk_offset() -> int:
 
 
 
-def check_chembl_data_existance() -> None:
+def check_chembl_data_existance() -> str:
     
     chembl_url = Variable.get('chembl_url')
 
@@ -73,6 +73,8 @@ def check_chembl_data_existance() -> None:
     logging.info(f'last chunk: {last_chunk_offset}, total count: {total_count}')
 
     if total_count - last_chunk_offset < chunk_size:
-        return 'load_s3_input_data'
+        # all data loaded
+        return 'check_for_new_input_data'
     else:
+        # there are some not loaded chunks of data
         return 'handle_chembl_data'

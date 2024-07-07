@@ -42,7 +42,7 @@ execute_tasks_new_python_interpreter = True
 ```
 Also increase sql alchemy pool recycle time and number of connections.
 ```python
-sql_alchemy_pool_recycle = 5400
+sql_alchemy_pool_recycle = 10000
 sql_alchemy_pool_size = 10
 ```
 
