@@ -1,6 +1,7 @@
 import logging
 
 from typing import Union
+from rdkit import RDLogger 
 
 import rdkit
 from rdkit.Chem import AllChem
@@ -13,17 +14,22 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
 def _get_fingerprint(smile: str) -> Union[rdkit.DataStructs.cDataStructs.ExplicitBitVect, None]:
-    mol = Chem.MolFromSmiles(smile)
+    try:
+        mol = Chem.MolFromSmiles(smile)
+    except:
+        return None
+    
     if mol is None:
         return None  # Return None if the SMILES string is invalid
     else:
-        return AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=1024)
+        return AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=1024).ToBase64()
 
 
 # calc finger prints for molecules from passed table 
 def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chembl_data: bool, ti) -> None:
     
     postgres_hook = PostgresHook(postgres_conn_id='postgres_AWS')
+    engine = postgres_hook.get_sqlalchemy_engine()
     connection = postgres_hook.get_conn()
     path_to_download = '/opt/airflow/'
     fp_files_names = []
@@ -37,7 +43,7 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
 
         # get table size
         cursor.execute(
-            f'select count(chembl_id) from {source_table_name}'
+            f'select count(chembl_id) from {source_table_name};'
         )
         table_size = cursor.fetchall()[0][0]
 
@@ -56,15 +62,17 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
             logging.info(f'{len(tmp_df)} mols have smiles.')
             
             # calc fingerprints 
+            RDLogger.DisableLog('rdApp.*')
             tmp_df['fingerprint'] = tmp_df.smile.apply(_get_fingerprint)
-            
+            RDLogger.EnableLog('rdApp.*')
+
             # drop mols which have invalid smiles (for them fingerprint is None)
             tmp_df = tmp_df.dropna() 
             logging.info(f'Fingerprints were successfully calculated for {len(tmp_df)} mols.')
 
             # load data to DB
             tmp_df = tmp_df.drop(columns=['smile'])
-            tmp_df.to_sql(dest_table_name, connection, if_exists='append', index=False)
+            tmp_df.to_sql(dest_table_name, engine, if_exists='append', index=False)
 
             # save to file for futher upload to s3. Only for mols from chembl 
             if is_chembl_data:
@@ -77,4 +85,9 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
 
 
 
-    
+"""
+ [18:49:40] SMILES Parse Error: Failed parsing SMILES '"O=C(O)c1csc(-n2ccc3ccc(Cl)cc32)n1"' for input: '"O=C(O)c1csc(-n2ccc3ccc(Cl)cc32)n1"'
+airflow-scheduler-1  | [18:49:40] SMILES Parse Error: syntax error while parsing: "CCc1[nH]c(C(=O)OC)cc2c3ccccc3nc1-2"
+airflow-scheduler-1  | [18:49:40] SMILES Parse Error: Failed parsing SMILES '"CCc1[nH]c(C(=O)OC)cc2c3ccccc3nc1-2"' for input: '"CCc1[nH]c(C(=O)OC)cc2c3ccccc3nc1-2"'
+airflow-scheduler-1  | [1
+"""

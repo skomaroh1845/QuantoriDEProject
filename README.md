@@ -1,3 +1,6 @@
+
+![alt text](imgs/image-5.png)
+
 # QuantoriDEProject
 ## About 
 This pipeline gets top-10 most similar molecules for input set of molecules. Where input set of molecules is taken from AWS S3 bucket. 
@@ -45,6 +48,8 @@ Also increase sql alchemy pool recycle time and number of connections.
 sql_alchemy_pool_recycle = 10000
 sql_alchemy_pool_size = 10
 ```
+
+#### --------------------------- Coming soon --------------------------- 
 
 #### 7) Launch the DAG
 Click the trigger DAG button on the right side and go drink coffee, now machines is working instead of you.

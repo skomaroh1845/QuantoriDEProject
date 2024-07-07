@@ -4,6 +4,7 @@ import multiprocessing
 
 import rdkit
 from rdkit import DataStructs
+from rdkit.DataStructs.cDataStructs import ExplicitBitVect
 import pandas as pd
 import psycopg2
 
@@ -26,6 +27,16 @@ def _get_table_chunk(
     return pd.DataFrame(cursor.fetchall(), columns=[f'chembl_id', f'fingerprint'])
 
 
+def _get_similarity(
+        target_fp: ExplicitBitVect,
+        fp_base64: str, 
+    ) -> float:
+
+    fingerprint = ExplicitBitVect(2048) 
+    fingerprint.FromBase64(fp_base64)
+    return DataStructs.TanimotoSimilarity(fingerprint, target_fp)
+
+
 def _calc_similarity_for_chunk(
         target_fp: rdkit.DataStructs.cDataStructs.ExplicitBitVect,
         chunk_df: pd.DataFrame
@@ -35,8 +46,8 @@ def _calc_similarity_for_chunk(
     chunk_df_copy = chunk_df.copy(deep=True) 
 
     chunk_df_copy['similarity'] = chunk_df_copy.apply(
-        lambda raw: DataStructs.TanimotoSimilarity(raw.fingerprint, target_fp)
-    )
+        lambda raw: _get_similarity(target_fp, raw.fingerprint)
+        )
 
     # drop unnecessary data
     chunk_df_copy.drop(columns=['fingerprint'])
@@ -81,7 +92,9 @@ def calc_similarity_scores(
         paths = []
         for i, raw in target_df.iterrows():
             target_id = raw.chembl_id.values[0]
-            target_fp = raw.fingerprint.values[0]
+
+            target_fp = ExplicitBitVect(2048) 
+            target_fp.FromBase64(raw.fingerprint.values[0])
 
             logging.info(f'Calculating Tanimoto similarity, done target molecules: {i}/{len(target_df)}.')
             

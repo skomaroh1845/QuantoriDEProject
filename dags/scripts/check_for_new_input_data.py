@@ -13,7 +13,6 @@ def check_for_new_input_data(ti) -> str:
     s3_hook = S3Hook(aws_conn_id = 's3_bucket')
     bucket_name = Variable.get('bucket_name')
     input_prefix = Variable.get('input_prefix')  # ends with /
-    path_to_download = '/opt/airflow/'
 
     # get list of input files 
     list_of_input_files = s3_hook.list_keys(bucket_name=bucket_name, prefix=input_prefix)
