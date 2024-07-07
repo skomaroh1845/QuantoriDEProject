@@ -56,6 +56,10 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
             # get data from DB
             tmp_df = pd.DataFrame(cursor.fetchall(), columns=['chembl_id', 'smile'])
             logging.info(f'Got {len(tmp_df)} mols from {source_table_name}.')
+
+            # There are "" around smiles in silver_chembl_id table, no time to normal fix
+            if is_chembl_data:
+                tmp_df.smile = tmp_df.smile.apply(lambda x: x.strip('"'))
             
             # drop mols which don't have smiles 
             tmp_df = tmp_df.dropna()  

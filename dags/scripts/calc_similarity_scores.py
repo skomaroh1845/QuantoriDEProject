@@ -91,10 +91,10 @@ def calc_similarity_scores(
 
         paths = []
         for i, raw in target_df.iterrows():
-            target_id = raw.chembl_id.values[0]
+            target_id = raw.chembl_id
 
             target_fp = ExplicitBitVect(2048) 
-            target_fp.FromBase64(raw.fingerprint.values[0])
+            target_fp.FromBase64(raw.fingerprint)
 
             logging.info(f'Calculating Tanimoto similarity, done target molecules: {i}/{len(target_df)}.')
             

@@ -34,7 +34,6 @@ with DAG(
     
     start_op = EmptyOperator(task_id='start')
 
-    mols_fingerprints_and_similarity_scores
     check_chembl_data_existance_op = BranchPythonOperator(
         task_id='check_chembl_data_existance', 
         python_callable=check_chembl_data_existance,
