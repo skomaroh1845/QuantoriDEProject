@@ -21,6 +21,7 @@ from scripts.load_and_ingest_s3_input_data import (
 from scripts.calc_mols_fingerprints import calc_mols_fingerprints
 from scripts.calc_similarity_scores import calc_similarity_scores
 from scripts.upload_mols_data_to_s3 import upload_mols_data
+from scripts.take_top_10_most_similar_mols import take_top_10_most_similar_mols
 
 
 with DAG(
@@ -120,7 +121,7 @@ with DAG(
 
     upload_mols_similarities_op = PythonOperator(
         task_id='upload_mols_similarities', 
-        python_callable=empty_func,#upload_mols_data,  # to S3 bucket
+        python_callable=upload_mols_data,  # to S3 bucket
         op_kwargs={
             'folder_name': 'similarity_scores/', # should end with /
             'xcom_pull_key': 'parquet_paths',
@@ -129,7 +130,14 @@ with DAG(
         }
         )
 
-    take_top10_most_similar_mols_op = PythonOperator(task_id='take_top_10_most_similar_mols', python_callable=empty_func)
+    take_top10_most_similar_mols_op = PythonOperator(
+        task_id='take_top_10_most_similar_mols', 
+        python_callable=take_top_10_most_similar_mols,
+        op_kwargs={
+            'xcom_pull_key': 'parquet_paths',
+            'xcom_pull_task_id': 'calc_similarity_scores',
+        }
+        )
 
     make_data_mart_op = PythonOperator(task_id='make_data_mart', python_callable=empty_func)
 

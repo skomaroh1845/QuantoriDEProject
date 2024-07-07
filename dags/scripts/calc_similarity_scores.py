@@ -38,15 +38,17 @@ def _get_similarity(
 
 
 def _calc_similarity_for_chunk(
-        target_fp: rdkit.DataStructs.cDataStructs.ExplicitBitVect,
+        target_fp: ExplicitBitVect,
         chunk_df: pd.DataFrame
     ) -> pd.DataFrame:
 
     # deep copy because df will be changed
     chunk_df_copy = chunk_df.copy(deep=True) 
 
-    chunk_df_copy['similarity'] = chunk_df_copy.apply(
-        lambda raw: _get_similarity(target_fp, raw.fingerprint)
+    logging.info(f"Calculating similarities...")
+
+    chunk_df_copy['similarity'] = chunk_df_copy.fingerprint.apply(
+            lambda x: _get_similarity(target_fp, x)
         )
 
     # drop unnecessary data
@@ -76,6 +78,7 @@ def calc_similarity_scores(
 
         # get target fingerprints
         target_df = _get_table_chunk(cursor, target_fingerprints_table, chunk_size, 0)
+        logging.info(f'Got target fingerprints table with {len(target_df)} raws')
 
         # get chembl table size
         cursor.execute(
@@ -83,11 +86,15 @@ def calc_similarity_scores(
         )
         table_size = cursor.fetchall()[0][0]
         
+        logging.info(f'Getting ChemBL fingerprints table chunks ...')
+
         # get all chembl fingerprints
         chebml_chunk_list = []
         for offset in range(0, table_size, chunk_size):
             tmp_chembl_df = _get_table_chunk(cursor, chembl_fingerprints_table, chunk_size, offset)
+            logging.info(f'Chunk {offset // chunk_size + 1}/{table_size//chunk_size + 1}')
             chebml_chunk_list.append(tmp_chembl_df)
+        logging.info(f'Got ChemBL fingerprints table chunks: {len(chebml_chunk_list)} chunks of {chunk_size} raws each')
 
         paths = []
         for i, raw in target_df.iterrows():
@@ -103,6 +110,8 @@ def calc_similarity_scores(
                 zip(repeat(target_fp), chebml_chunk_list),
             )
             all_scores_for_mol = pd.concat(scores_chunk_list)
+
+            logging.info(f"Done similarities for {target_id}")
 
             # save to parquet file for further uploading to s3 
             path = f'/opt/airflow/{target_id}_similarity_scores.parquet'
