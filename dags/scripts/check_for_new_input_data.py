@@ -25,11 +25,10 @@ def check_for_new_input_data(ti) -> str:
     postgres_hook = PostgresHook(postgres_conn_id='postgres_AWS')
     connection = postgres_hook.get_conn()
     with connection.cursor() as cursor:
-        # check if a table is empty
         try:
             cursor.execute(
                 'select * from names_of_loaded_s3_files;'
-            )  # 1 - empty, 0 - full
+            )
 
             loaded_files = [ _[1] for _ in cursor.fetchall()]
             
