@@ -1,0 +1,77 @@
+import logging
+
+import rdlit
+from rdkit.Chem import AllChem
+from rdkit import Chem
+import pandas as pd
+
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+
+
+
+
+def _get_fingerprint(smile: str) -> rdkit.DataStructs.cDataStructs.ExplicitBitVect | None:
+    mol = Chem.MolFromSmiles(smile)
+    if mol is None:
+        return None  # Return None if the SMILES string is invalid
+    else:
+        return AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=1024)
+
+
+# calc finger prints for molecules from passed table 
+def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chembl_data: bool, ti) -> None:
+    
+    postgres_hook = PostgresHook(postgres_conn_id='postgres_AWS')
+    connection = postgres_hook.get_conn()
+    path_to_download = '/opt/airflow/'
+    fp_files_names = []
+
+    # by my estimations silver_chembl_id table with ~2.4*10^6 rows should be ~500 Mb
+    # lets handle with it by chunks of ~10Mb size, they should have than ~50*10^3 rows
+    # and loop will get 50 iterations 
+    chunk_size = 50000
+
+    with connection.cursor() as cursor:
+
+        # get table size
+        cursor.execute(
+            f'select count(chembl_id) from {source_table_name}'
+        )
+        table_size = cursor.fetchall()[0][0]
+
+        for offset in range(0, table_size, chunk_size):
+            logging.info(f'Calculating fingerprints. Table size: {table_size}, curr offset: {offset}.')
+
+            cursor.execute(
+                f'select chembl_id, smile from {source_table_name} limit {chunk_size} offset {offset};'
+            ) 
+            # get data from DB
+            tmp_df = pd.DataFrame(cursor.fetchall(), columns=['chembl_id', 'smile'])
+            logging.info(f'Got {len(tmp_df)} mols from {source_table_name}.')
+            
+            # drop mols which don't have smiles 
+            tmp_df = tmp_df.dropna()  
+            logging.info(f'{len(tmp_df)} mols have smiles.')
+            
+            # calc fingerprints 
+            tmp_df['fingerprint'] = tmp_df.smile.apply(_get_fingerprint)
+            
+            # drop mols which have invalid smiles (for them fingerprint is None)
+            tmp_df = tmp_df.dropna() 
+            logging.info(f'Fingerprints were successfully calculated for {len(tmp_df)} mols.')
+
+            # load data to DB
+            tmp_df.to_sql(dest_table_name, connection, if_exists='append', index=False)
+
+            # save to file for futher upload to s3. Only for mols from chembl 
+            if is_chembl_data:
+                tmp_df.to_csv(path_to_download + f'{dest_table_name}_{offset}.csv', index=False)
+                fp_files_names.append(path_to_download + f'{dest_table_name}_{offset}.csv')
+        
+    if is_chembl_data:
+        ti.xcom_push(key='fp_files_names', value=fp_files_names)
+
+
+
+
+    

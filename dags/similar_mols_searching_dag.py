@@ -17,6 +17,7 @@ from scripts.load_and_ingest_s3_input_data import (
     load_s3_input_data, 
     ingest_s3_input_data,
 )
+from scripts.calc_mols_fingerprints import calc_mols_fingerprints
 from scripts.upload_mols_data_to_s3 import upload_mols_data
 
 
@@ -41,20 +42,55 @@ with DAG(
         python_callable = handle_chembl_data,
     )
 
-    check_for_new_input_data_op = BranchPythonOperator(task_id='check_for_new_input_data', python_callable=check_for_new_input_data) 
+    check_for_new_input_data_op = BranchPythonOperator(
+        task_id='check_for_new_input_data', 
+        python_callable=check_for_new_input_data
+        ) 
 
-    load_s3_input_data_op = PythonOperator(task_id='load_s3_input_data', python_callable=load_s3_input_data)
+    load_s3_input_data_op = PythonOperator(
+        task_id='load_s3_input_data', 
+        python_callable=load_s3_input_data
+        )
 
-    ingest_s3_input_data_op = PythonOperator(task_id='ingest_s3_input_data', python_callable=ingest_s3_input_data)
+    ingest_s3_input_data_op = PythonOperator(
+        task_id='ingest_s3_input_data', 
+        python_callable=ingest_s3_input_data
+        )
 
     check_op = EmptyOperator(
         task_id='check', 
         trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
         )
     
-    # calc_mols_fingerprints_op = PythonOperator(task_id='calc_mols_fingerprints', python_callable=empty_func)
+    calc_chembl_mols_fingerprints_op = PythonOperator(
+        task_id='calc_chembl_mols_fingerprints', 
+        python_callable=calc_mols_fingerprints,
+        op_kwargs={
+            'source_table_name': 'silver_chembl_id',
+            'dest_table_name': 'chembl_mols_fingerprints',
+            'is_chembl_data' : True,
+        }
+        )
+    
+    upload_mols_fingerprints_op = PythonOperator(  
+        task_id='upload_mols_fingerprints', 
+        python_callable=upload_mols_data,  # to S3 bucket
+        op_kwargs={
+            'xcom_pull_key': 'fp_files_names',
+            'xcom_pull_task_id': 'calc_mols_fingerprints',
+        }
+        )  
+    
+    calc_target_mols_fingerprints_op = PythonOperator(
+        task_id='calc_target_mols_fingerprints', 
+        python_callable=calc_mols_fingerprints,
+        op_kwargs={
+            'source_table_name': 'silver_target_molecules',
+            'dest_table_name': 'target_mols_fingerprints',
+            'is_chembl_data' : False,
+        }
+        )
 
-    # upload_mols_fingerprints_op = PythonOperator(task_id='upload_mols_fingerprints', python_callable=empty_func)  # to S3 bucket
 
     # calc_similarity_scores_op = PythonOperator(task_id='calc_similarity_scores', python_callable=empty_func)
 
