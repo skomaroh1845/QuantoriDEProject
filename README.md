@@ -1,5 +1,20 @@
+ 
+
 
 ![alt text](imgs/image-5.png)
+
+
+I managed to make a pipeline only up to the function for calculating the similarity of molecules, further operators are just empty functions, except one for selecting the top 10 molecules, it was written but not debugged. 
+
+But I think it’s still not bad for 3 days of work) 
+
+Perhaps I’ll finish the project in the next couple of days, if so, the finishing touches will be in the `after_deadline` branch.
+
+For any questions about the solution ask me in telegram `@komarov_na`, I may accidentally miss messages in Teams.
+
+P.S. As you understand, there was no time to write tests for this)
+
+
 
 # QuantoriDEProject
 ## About 
@@ -28,18 +43,30 @@ Open a tab in your web browser at `http://localhost:8080/`. Login and password a
 
 ![alt text](imgs/image-2.png)
 
-#### 5) Setup the connection
-In the above menu go to Admin->Connections, press add connection button and fill the fields with connection info for your DB.
+#### 5) Set up connections
+In the above menu go to Admin->Connections, press add connection button and fill the fields with connection info for your DB, **connection_id should be `postgres_AWS`**. 
 
 ![alt text](imgs/image.png)
 
-#### 6) Setup variables
-In the above menu go to Admin->Variables, you need to add `num_of_workers` variable for multiprocessing, `chembl_url` with the link to a data source, `necessary_cols` with the list of cols (sep=' ') which you want so save from original data - mine was `molecule_chembl_id molecule_properties molecule_structures molecule_type`, and `chunk_size` - how many molecules you want to get from one API call, ChEMBL API gets value <= 1000.
+Add a connection to AWS S3 bucket. **Connection_id should be `s3_bucket`**. Also provide json in Extra field with `region_name` and `aws_session_token`.
+
+![alt text](imgs/image-6.png)
+
+
+#### 6) Set up variables
+In the above menu go to Admin->Variables, you need to add all following variables: 
+- `num_of_workers` for multiprocessing (my value: `8`);
+- `chembl_url` with the link to a data source (`https://www.ebi.ac.uk/chembl/api/data/molecule`);
+- `necessary_cols` with the list of cols (sep=' ') which you want so save from original data (mine was: `molecule_chembl_id molecule_properties molecule_structures molecule_type`);
+- `chunk_size` - how many molecules you want to get from one API call, ChEMBL API gets value <= 1000 (my value: `1000`);
+- `bucket_name` name of bucket where you want to store results (my value: `de-school-2024-aws`);
+- `input_prefix` prefix of input folder in s3 bucket with target molecules, should ends with "/" (my value: `final_task/input_files/`);
+- `output_prefix` prefix of output folder in s3 bucket, should ends with "/" (my value: `final_task/komarov_nikolai/`);
 
 ![alt text](imgs/image-4.png)
 
 #### 7) Edit config `airflow.cfg`
-This setting will cause airflow to start a new Python interpreter when running task instead of forking/using multiprocessing, and will allow us using multiprocessing inside the tasks. Set this variable `True` in `airflow.cfg` file.
+This setting will cause airflow to start a new Python interpreter when running task instead of forking/using multiprocessing, and will allow us using multiprocessing inside the tasks. Set this variable `True` in `airflow.cfg`.
 ```python
 execute_tasks_new_python_interpreter = True
 ```
@@ -49,10 +76,10 @@ sql_alchemy_pool_recycle = 10000
 sql_alchemy_pool_size = 10
 ```
 
-#### --------------------------- Coming soon --------------------------- 
 
 #### 7) Launch the DAG
-Click the trigger DAG button on the right side and go drink coffee, now machines is working instead of you.
+Go to home page and click the trigger DAG button on the right side.
+Сongratulations! You can go drink coffee, now machines is working instead of you.
 
 ![alt text](imgs/image-3.png)
 
@@ -60,5 +87,3 @@ Click the trigger DAG button on the right side and go drink coffee, now machines
 
 ## Pipeline structure
 ![alt text](imgs/image-1.png)
-
-

@@ -52,7 +52,7 @@ def _calc_similarity_for_chunk(
         )
 
     # drop unnecessary data
-    chunk_df_copy.drop(columns=['fingerprint'])
+    chunk_df_copy = chunk_df_copy.drop(columns=['fingerprint'])
     
     return chunk_df_copy
 
@@ -114,7 +114,7 @@ def calc_similarity_scores(
             logging.info(f"Done similarities for {target_id}")
 
             # save to parquet file for further uploading to s3 
-            path = f'/opt/airflow/{target_id}_similarity_scores.parquet'
+            path = f'/opt/airflow/data/{target_id}_similarity_scores.parquet'
             all_scores_for_mol.to_parquet(path, index=False)
             paths.append(path)
         

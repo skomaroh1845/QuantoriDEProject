@@ -5,3 +5,4 @@
 /dags/__pycache__
 /dags/scripts/__pycache__
 /postgres_data
+/data

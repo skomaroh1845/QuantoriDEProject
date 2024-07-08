@@ -36,7 +36,7 @@ def load_s3_input_data(ti) -> None:
     # boto3 init
     s3_hook = S3Hook(aws_conn_id = 's3_bucket')
     bucket_name = Variable.get('bucket_name')
-    path_to_download = '/opt/airflow/'
+    path_to_download = '/opt/airflow/data/'
 
     # get list of input files 
     list_of_input_files = ti.xcom_pull(task_ids='check_for_new_input_data', key='files_to_load')

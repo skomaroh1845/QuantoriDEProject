@@ -22,8 +22,8 @@ def upload_mols_data(folder_name: str, xcom_pull_task_id:str, xcom_pull_key: str
         files_names = [files_names]
 
     for file in files_names:
-        key = output_prefix + file[0].split('/')[-1]
-        s3_hook.load_file(file, key, bucket_name)
+        key = output_prefix + file.split('/')[-1]
+        s3_hook.load_file(file, key, bucket_name, replace=True)
         logging.info(f'loaded file {file} to S3 bucket {bucket_name}, key: {key}')
         
         if del_after:

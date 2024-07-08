@@ -31,7 +31,7 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
     postgres_hook = PostgresHook(postgres_conn_id='postgres_AWS')
     engine = postgres_hook.get_sqlalchemy_engine()
     connection = postgres_hook.get_conn()
-    path_to_download = '/opt/airflow/'
+    path_to_download = '/opt/airflow/data/'
     fp_files_names = []
 
     # by my estimations silver_chembl_id table with ~2.4*10^6 raws should be ~500 Mb
