@@ -18,7 +18,7 @@ def take_top_10_most_similar_mols(xcom_pull_key: str, xcom_pull_task_id: str, ti
 
         # get top 10 values
         sorted_similarity = similarity_scores.sort_values('similarity', ascending=False)
-        top_10_scores = sorted_similarity.head(10)
+        top_10_scores = sorted_similarity.head(10).copy(deep=True)
         
         top_10_scores.columns = ['source_molecule',  'similarity']
         top_10_scores['target_molecule'] = target_id
@@ -29,6 +29,9 @@ def take_top_10_most_similar_mols(xcom_pull_key: str, xcom_pull_task_id: str, ti
             == sorted_similarity.similarity.values[10]:
             
             top_10_scores['has_duplicates_of_last_largest_score'] = True
+        else:
+            top_10_scores['has_duplicates_of_last_largest_score'] = False
+
 
         top_10_df_list.append(top_10_scores)
 
@@ -36,7 +39,7 @@ def take_top_10_most_similar_mols(xcom_pull_key: str, xcom_pull_task_id: str, ti
 
     postgres_hook = PostgresHook(postgres_conn_id='postgres_AWS')
     engine = postgres_hook.get_sqlalchemy_engine()
-    common_df.to_sql('gold_fact_table_molecule_similarities', engine, if_exists='append')
+    common_df.to_sql('gold_fact_table_molecule_similarities', engine, if_exists='append', index=False)
 
 
 

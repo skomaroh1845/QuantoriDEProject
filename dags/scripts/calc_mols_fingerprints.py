@@ -80,7 +80,7 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
 
             # save to file for futher upload to s3. Only for mols from chembl 
             if is_chembl_data:
-                tmp_df.to_csv(path_to_download + f'{dest_table_name}_{offset}.csv', index=False)
+                tmp_df.to_csv(path_to_download + f'{dest_table_name}_offset_{offset}.csv', index=False)
                 fp_files_names.append(path_to_download + f'{dest_table_name}_offset_{offset}.csv')
         
     if is_chembl_data:
