@@ -68,17 +68,17 @@ def calc_similarity_scores(
     num_of_workers = int(Variable.get('num_of_workers'))
     pool = multiprocessing.Pool(processes=num_of_workers)
 
-    # by my estimations silver_chembl_fingerprints table with ~2.4*10^6 raws should be ~500 Mb
-    # lets handle with it by chunks of ~10Mb size, than they should have ~50*10^3 raws
+    # by my estimations silver_chembl_fingerprints table with ~2.4*10^6 rows should be ~500 Mb
+    # lets handle with it by chunks of ~10Mb size, than they should have ~50*10^3 rows
     # and loop will take 50 iterations.
-    # table silver_target_fingerprints has only ~10^2 raws and will be loaded at ones 
+    # table silver_target_fingerprints has only ~10^2 rows and will be loaded at ones 
     chunk_size = 50000
 
     with connection.cursor() as cursor:
 
         # get target fingerprints
         target_df = _get_table_chunk(cursor, target_fingerprints_table, chunk_size, 0)
-        logging.info(f'Got target fingerprints table with {len(target_df)} raws')
+        logging.info(f'Got target fingerprints table with {len(target_df)} rows')
 
         # get chembl table size
         cursor.execute(
@@ -94,14 +94,14 @@ def calc_similarity_scores(
             tmp_chembl_df = _get_table_chunk(cursor, chembl_fingerprints_table, chunk_size, offset)
             logging.info(f'Chunk {offset // chunk_size + 1}/{table_size//chunk_size + 1}')
             chebml_chunk_list.append(tmp_chembl_df)
-        logging.info(f'Got ChemBL fingerprints table chunks: {len(chebml_chunk_list)} chunks of {chunk_size} raws each')
+        logging.info(f'Got ChemBL fingerprints table chunks: {len(chebml_chunk_list)} chunks of {chunk_size} rows each')
 
         paths = []
-        for i, raw in target_df.iterrows():
-            target_id = raw.chembl_id
+        for i, row in target_df.iterrows():
+            target_id = row.chembl_id
 
             target_fp = ExplicitBitVect(2048) 
-            target_fp.FromBase64(raw.fingerprint)
+            target_fp.FromBase64(row.fingerprint)
 
             logging.info(f'Calculating Tanimoto similarity, done target molecules: {i}/{len(target_df)}.')
             

@@ -139,11 +139,23 @@ with DAG(
         }
         )
 
-    make_data_mart_op = PythonOperator(task_id='make_data_mart', python_callable=empty_func)
+    make_data_mart_op = PostgresOperator(
+        task_id='make_data_mart',
+        sql='scripts/make_data_mart.sql',
+        postgres_conn_id='postgres_AWS'
+    )
 
-    make_db_views_for_top10_mols_op = PythonOperator(task_id='make_db_views_for_top10_mols', python_callable=empty_func)
+    make_db_views_for_top10_mols_op = PostgresOperator(
+        task_id='make_db_views_for_top10_mols',
+        sql='scripts/make_db_views_for_top10_mols.sql',
+        postgres_conn_id='postgres_AWS'
+    )
 
-    make_db_views_for_all_mols_op = PythonOperator(task_id='make_db_views_for_all_mols', python_callable=empty_func)
+    make_db_views_for_all_mols_op = PostgresOperator(
+        task_id='make_db_views_for_all_mols',
+        sql='scripts/make_db_views_for_all_mols.sql',
+        postgres_conn_id='postgres_AWS'
+    )
 
     check_2_op = EmptyOperator(
         task_id='check_2', 

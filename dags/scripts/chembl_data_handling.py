@@ -56,7 +56,7 @@ def _process_data_chunk(mols: List[Dict], offset: int) -> pd.DataFrame:
 
 
 def _upload_data_chunk(db_engine: sqlalchemy.engine.base.Engine, df: pd.DataFrame) -> None:
-    df.to_sql('bronze_raw_mols_data', db_engine, if_exists='append')
+    df.to_sql('bronze_row_mols_data', db_engine, if_exists='append')
 
 
 def _worker(args) -> None:

@@ -19,7 +19,7 @@ def _fetch_last_chunk_offset() -> int:
         # check if a table is empty
         try:
             cursor.execute(
-                'select case when exists(select 1 from nkomarov.bronze_raw_mols_data) then 0 else 1 end as IsEmpty;'
+                'select case when exists(select 1 from bronze_row_mols_data) then 0 else 1 end as IsEmpty;'
             )  # 1 - empty, 0 - full
 
             if cursor.fetchall()[0][0] == 1:
@@ -29,14 +29,14 @@ def _fetch_last_chunk_offset() -> int:
             return 0  
 
         # check for missed offsets
-        # this query compares a raw with a previous raw and checks if the difference is more than chunk size
+        # this query compares a row with a previous row and checks if the difference is more than chunk size
         cursor.execute(
             """
             select tmp."skipped_offset" 
             from
                 (select "chunk_size" + lag("offset") over (ORDER BY "offset") as "skipped_offset",
                     "offset" - "chunk_size" - lag("offset") over (ORDER BY "offset") as "skepped_value"
-                from bronze_raw_mols_data) tmp
+                from bronze_row_mols_data) tmp
             where tmp."skepped_value" > 0
             order by tmp."skipped_offset";
             """
@@ -49,7 +49,7 @@ def _fetch_last_chunk_offset() -> int:
         else:
             # no missed offsets found
             # than last offset is max offset 
-            cursor.execute('select max("offset") from nkomarov.bronze_raw_mols_data;')
+            cursor.execute('select max("offset") from bronze_row_mols_data;')
             return cursor.fetchall()[0][0] 
 
 

@@ -34,8 +34,8 @@ def calc_mols_fingerprints(source_table_name: str, dest_table_name: str, is_chem
     path_to_download = '/opt/airflow/data/'
     fp_files_names = []
 
-    # by my estimations silver_chembl_id table with ~2.4*10^6 raws should be ~500 Mb
-    # lets handle with it by chunks of ~10Mb size, than they should have ~50*10^3 raws
+    # by my estimations silver_chembl_id table with ~2.4*10^6 rows should be ~500 Mb
+    # lets handle with it by chunks of ~10Mb size, than they should have ~50*10^3 rows
     # and loop will take 50 iterations 
     chunk_size = 50000
 
